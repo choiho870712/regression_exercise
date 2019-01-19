@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[64]:
+# In[7]:
 
 
 # library
@@ -10,7 +10,7 @@ import numpy as np
 import math
 
 
-# In[65]:
+# In[8]:
 
 
 # read csv
@@ -37,7 +37,7 @@ with open('banqiao.csv', 'r') as csvfile :
             first_line = False
 
 
-# In[66]:
+# In[9]:
 
 
 # data preprocessing
@@ -102,13 +102,13 @@ for i in range(8784) :
         print(raw_wind_direction)
 
     # wind to rectangular form ( wind = wind_speed * wind_direction )
-    data[3][i] = wind_speed*math.sin(wind_direction)
-    data[4][i] = wind_speed*math.cos(wind_direction)
+    data[3][i] = wind_speed*math.sin(wind_direction/360)
+    data[4][i] = wind_speed*math.cos(wind_direction/360)
     
 data = np.array(data)
 
 
-# In[67]:
+# In[10]:
 
 
 # feature scaling with standardization
@@ -127,7 +127,7 @@ for element in data :
     std_store.append(std)
 
 
-# In[68]:
+# In[11]:
 
 
 # get training data and testing data
@@ -155,7 +155,7 @@ x_train = np.array(x_train)
 y_train = np.array(y_train)
 
 
-# In[69]:
+# In[12]:
 
 
 # model 1
@@ -173,16 +173,15 @@ length = len(x_train[0][0])
 lr = 1 # learning rate
 iteration = 10 # iteration
 
-w = np.zeros(length) # weight
-b = 1 # bias
-
-grad_w_sum = np.zeros(length)
-grad_b_sum = 0
-
-err_sum = 0
 # 3-fold cross validation
+err_sum = 0
 for va in range(3) :
     # training
+    w = np.zeros(length) # weight
+    b = 1 # bias
+    grad_w_sum = np.zeros(length)
+    grad_b_sum = 0
+    
     for i in range(3) :
         # ignore if it is validation set
         if i == va :

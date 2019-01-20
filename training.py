@@ -137,12 +137,16 @@ def training(lr,breaking_point) :
     best_w = np.zeros(len(x_train[0][0])) # weight
     best_b = 1 # bias
 
-    cur_avg_loss = 1.0
-    cur_w = np.zeros(len(x_train[0][0])) # weight
-    cur_b = 1 # bias
-
-    grad_w_sum = np.zeros(len(x_train[0][0]))
-    grad_b_sum = 0
+    try :
+        cur_w = np.load('weight.npy') # weight
+        cur_b = np.load('bias.npy') # bias
+        grad_w_sum = np.load('grad_w_sum.npy')
+        grad_b_sum = np.load('grad_b_sum.npy')
+    except :
+        cur_w = np.zeros(len(x_train[0][0])) # weight
+        cur_b = 1 # bias
+        grad_w_sum = np.zeros(len(x_train[0][0]))
+        grad_b_sum = 0
 
     iteration = 0
     while True :
@@ -225,6 +229,8 @@ def training(lr,breaking_point) :
         if (iteration%10) == 0 :
             np.save('weight.npy', best_w)
             np.save('bias.npy', best_b)
+            np.save('grad_w_sum.npy',grad_w_sum)
+            np.save('grad_b_sum.npy',grad_b_sum)
 
 # modeling ///////////////////////////////////////////////
 

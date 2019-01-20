@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[7]:
+# In[2]:
 
 
 # library
@@ -10,13 +10,13 @@ import numpy as np
 import math
 
 
-# In[8]:
+# In[3]:
 
 
 # read csv
 
 data = []
-# 7 elements
+# 7 features
 for i in range(7):
 	data.append([])
     
@@ -30,14 +30,14 @@ with open('banqiao.csv', 'r') as csvfile :
     for line in reader :
         # except first line
         if first_line != True :
-             # 7 elements
+             # 7 features
             for i in range(7) :
                 data[i].append(line[i+1])
         else :
             first_line = False
 
 
-# In[9]:
+# In[4]:
 
 
 # data preprocessing
@@ -52,7 +52,7 @@ for i in range(8784) :
     
     # rainfall
     if ( data[5][i] == 'T' ) :
-        data[5][i] = 0.0
+        data[5][i] = 0.05
     else :
         data[5][i] = float(data[5][i])
     
@@ -108,7 +108,7 @@ for i in range(8784) :
 data = np.array(data)
 
 
-# In[10]:
+# In[5]:
 
 
 # feature scaling with standardization
@@ -119,15 +119,15 @@ std_store = []
 data_std = []
 
 # standardization
-for element in data :
-    mean = element.mean()
-    std = element.std()
-    data_std.append((element-mean)/std)
+for feature in data :
+    mean = feature.mean()
+    std = feature.std()
+    data_std.append((feature-mean)/std)
     mean_store.append(mean)
     std_store.append(std)
 
 
-# In[11]:
+# In[6]:
 
 
 # get training data and testing data
@@ -143,11 +143,11 @@ for i in range(3) :
 # 8776 kinds of 10hr data
 for i in range(8775) :
     x_train[i%3].append([])
-    y_train[i%3].append(data_std[1][i])
+    y_train[i%3].append(data_std[1][i+9])
         
     #  9hr data
     for j in range(9) :
-        # 7 elements
+        # 7 features
         for k in range(7) :
             x_train[i%3][int(i/3)].append(data_std[k][i+j])
 
@@ -155,75 +155,104 @@ x_train = np.array(x_train)
 y_train = np.array(y_train)
 
 
-# In[12]:
+# In[ ]:
 
 
-# model 1
+# training
+def training(lr,iteration,breaking_point) :
+    # 3-fold cross validation
+    loss_sum = 0
+    for va in range(3) :
+        # training
+        w = np.zeros(len(x_train[0][0])) # weight
+        b = 1 # bias
+        grad_w_sum = np.zeros(len(x_train[0][0]))
+        grad_b_sum = 0
 
-# model : y = b+x*w
-# difference : diff = y-y_hat
-# loss : L = diff**2
-# gradient decent : grad_w = dL/dw = 2*diff*x  # 2 can ignore
-#                   grad_b = dL/db = 2*diff    # 2 can ignore
-# adagrad : ada = sqrt(sum(g**2))
-# update : w_n+1 = w_n-lr*g/ada
+        for i in range(3) :
+            # ignore if it is validation set
+            if i == va :
+                continue
+            # repeat training same packet
+            for j in range(iteration) :
+                # stocastic gradient decent
+                for k in range(len(x_train[i])) :
+                    # testing
+                    y_raw = model(b,w,x_train[i][k]) # model
+                    diff = difference(y_raw,y_train[i][k]) # difference
+                    loss = loss_function(diff) # loss
 
-length = len(x_train[0][0])
+                    # update weight
+                    grad_w = grad_w_function(diff,x_train[i][k]) # gradient
+                    grad_w_sum += grad_w**2 # sum of gradient
+                    ada_w = np.sqrt(grad_w_sum) #adagrad
+                    w = w-lr*grad_w/ada_w # update
 
-lr = 1 # learning rate
-iteration = 10 # iteration
+                    # update bias
+                    grad_b = grad_b_function(diff,x_train[i][k]) # gradient
+                    grad_b_sum += grad_b**2 # sum of gradient
+                    ada_b = np.sqrt(grad_b_sum) #adagrad
+                    b = b-lr*grad_b/ada_b # update
 
-# 3-fold cross validation
-err_sum = 0
-for va in range(3) :
-    # training
-    w = np.zeros(length) # weight
-    b = 1 # bias
-    grad_w_sum = np.zeros(length)
-    grad_b_sum = 0
-    
-    for i in range(3) :
-        # ignore if it is validation set
-        if i == va :
-            continue
-        # train it if it is not validation set
-        for j in range(iteration) :
-            # stocastic gradient decent
-            for k in range(len(x_train[i])) :
-                # testing
-                y_raw = b+np.dot(x_train[i][j],w) # model
-                diff = y_raw-y_train[i][j] # difference
-                loss = diff**2 # loss
-
-                # update weight
-                grad_w = diff*x_train[i][j] # gradient
-                grad_w_sum += grad_w**2 # sum of gradient
-                ada_w = np.sqrt(grad_w_sum) #adagrad
-                w = w-lr*grad_w/ada_w # update
-
-                # update bias
-                grad_b_sum += loss**2 # sum of gradient
-                ada_b = np.sqrt(grad_b_sum) #adagrad
-                b = b-lr*loss/ada_b # update
-
-                if loss < 0.0000001 :
+                    if loss < breaking_point :
+                        break
+                if loss < breaking_point :
                     break
-            if loss < 0.0000001 :
-                break
-    # testing with validation set
-    y_raw = np.dot(x_train[va],w)+b # model
-    diff = y_raw-y_train[va] # difference
-    loss = math.sqrt(np.sum(diff**2)) # loss
-    err_sum += loss
-    print ('err%d = %f  ' % (va+1,loss))
-
-print ('avg_err = %f  ' % (err_sum/3))
+        # testing with validation set
+        y_raw = model(b,w,x_train[va]) # model
+        diff = difference(y_raw,y_train[va]) # difference
+        loss = np.sum(loss_function(diff))/len(diff) # loss
+        loss_sum += loss
+        
+    avg_loss = loss_sum/3
+    return avg_loss
 
 
 # In[ ]:
 
 
+# modeling 1
 
+# model : y = b+x*w
+# difference : diff = y-y_hat
+# loss : L = diff**2
+# gradient decent : grad_w = dL/dw = diff*x
+#                   grad_b = dL/db = diff
+# adagrad : ada = sqrt(sum(g**2))
+# update : w_n+1 = w_n-lr*g/ada
+
+def model(b,w,x) :
+    return np.dot(x,w)+b
+
+def difference(y,y_hat) :
+    return y-y_hat
+    
+def loss_function(diff) :
+    return diff**2
+
+def grad_w_function(diff,x) :
+    return diff*x
+
+def grad_b_function(diff,x) :
+    return diff
+
+lr = 1 # learning rate
+breaking_point = 0.00000000000001 # when to stop
+
+# find the best iteration
+best_avg_loss = 1.0
+best_iteration = 0
+for iteration in range(1000) :
+    avg_loss = training(lr,iteration,breaking_point)
+    print('avg_loss%d = %f  ' % (iteration+1,avg_loss))
+    if avg_loss < best_avg_loss :
+        best_avg_loss = avg_loss
+        best_iteration = iteration
+
+print ('best_iteration = %d best_avg_loss = %f  ' % (best_iteration,best_avg_loss))
+# avg_loss = 0.018675   >> not overfitting
+# breaking point hitted >> not underfitting
+# it's a good model, use it
 
 
 # In[ ]:

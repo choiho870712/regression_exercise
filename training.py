@@ -223,7 +223,7 @@ def training(lr,breaking_point) :
         if cur_avg_loss < best_avg_loss :
             best_avg_loss = cur_avg_loss
             best_w = cur_w
-            brst_b = cur_b
+            best_b = cur_b
     
         # store model while 10 iteration
         if (iteration%10) == 0 :

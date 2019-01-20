@@ -135,7 +135,7 @@ y_train = np.array(y_train)
 def training(lr,breaking_point) :
     best_avg_loss = 1.0
     best_w = np.zeros(len(x_train[0][0])) # weight
-    best_b = 1 # bias
+    best_b = 1.0 # bias
 
     try :
         cur_w = np.load('weight.npy') # weight
@@ -144,9 +144,9 @@ def training(lr,breaking_point) :
         grad_b_sum = np.load('grad_b_sum.npy')
     except :
         cur_w = np.zeros(len(x_train[0][0])) # weight
-        cur_b = 1 # bias
+        cur_b = 1.0 # bias
         grad_w_sum = np.zeros(len(x_train[0][0]))
-        grad_b_sum = 0
+        grad_b_sum = 0.0
 
     iteration = 0
     while True :
@@ -176,7 +176,7 @@ def training(lr,breaking_point) :
                     break
         
         # 3-fold cross validation testing average loss
-        loss_sum = 0
+        loss_sum = 0.0
         for va in range(3) :
             # training
             test_w = cur_w # weight
@@ -217,7 +217,7 @@ def training(lr,breaking_point) :
             loss_sum += loss
 
         cur_avg_loss = loss_sum/3
-        print('avg_loss in iteration%d = %f  ' % (iteration,cur_avg_loss))
+        print('avg_loss in iteration%d = %f   ' % (iteration,cur_avg_loss))
         
         # store weight and bias if it has best average loss
         if cur_avg_loss < best_avg_loss :

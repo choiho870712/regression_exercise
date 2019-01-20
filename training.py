@@ -231,6 +231,7 @@ def training(lr,breaking_point) :
             np.save('bias.npy', best_b)
             np.save('grad_w_sum.npy',grad_w_sum)
             np.save('grad_b_sum.npy',grad_b_sum)
+            print('saved model')
 
 # modeling ///////////////////////////////////////////////
 

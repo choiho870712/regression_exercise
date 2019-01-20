@@ -221,7 +221,7 @@ def training(lr,breaking_point) :
             best_w = cur_w
             brst_b = cur_b
     
-        # store model while 100 iteration
+        # store model while 10 iteration
         if (iteration%10) == 0 :
             np.save('weight.npy', best_w)
             np.save('bias.npy', best_b)

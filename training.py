@@ -104,6 +104,12 @@ for feature in data :
     mean_store.append(mean)
     std_store.append(std)
 
+# store mean and std
+mean_store = np.array(mean_store)
+std_store = np.array(std_store)
+np.save('mean.npy', mean_store)
+np.save('std.npy', std_store)
+
 # get training data in 3 parts ////////////////////////////////
 x_train = []
 y_train = []
@@ -126,7 +132,7 @@ x_train = np.array(x_train)
 y_train = np.array(y_train)
 
 # training ////////////////////////////////////////////////////
-def training(lr,iteration,breaking_point) :
+def training(lr,breaking_point) :
     best_avg_loss = 1.0
     best_w = np.zeros(len(x_train[0][0])) # weight
     best_b = 1 # bias
@@ -137,7 +143,10 @@ def training(lr,iteration,breaking_point) :
 
     grad_w_sum = np.zeros(len(x_train[0][0]))
     grad_b_sum = 0
-    for it in range(iteration) :
+
+    iteration = 0
+    while True :
+        iteration += 1
         # training with full data
         for i in range(3) :
             # stocastic gradient decent
@@ -204,7 +213,7 @@ def training(lr,iteration,breaking_point) :
             loss_sum += loss
 
         cur_avg_loss = loss_sum/3
-        print('avg_loss in iteration%d = %f  ' % (it,cur_avg_loss))
+        print('avg_loss in iteration%d = %f  ' % (iteration,cur_avg_loss))
         
         # store weight and bias if it has best average loss
         if cur_avg_loss < best_avg_loss :
@@ -212,14 +221,10 @@ def training(lr,iteration,breaking_point) :
             best_w = cur_w
             brst_b = cur_b
     
-    # store model
-    model_store = []
-    model_store.append(mean_store)
-    model_store.append(std_store)
-    model_store.append(best_w)
-    model_store.append(best_b)
-    model_store = np.array(model_store)
-    np.save('model.npy', model_store)
+        # store model while 100 iteration
+        if (iteration%10) == 0 :
+            np.save('weight.npy', best_w)
+            np.save('bias.npy', best_b)
 
 # modeling ///////////////////////////////////////////////
 
@@ -247,8 +252,7 @@ def grad_b_function(diff,x) :
     return diff
 
 lr = 1 # learning rate
-iteration = 1000
 breaking_point = 0.00000000000001 # when to stop
 
-training(lr,iteration,breaking_point)
+training(lr,breaking_point)
  

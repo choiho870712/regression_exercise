@@ -1,19 +1,9 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[2]:
-
-
 # library
 import csv
 import numpy as np
 import math
 
-
-# In[3]:
-
-
-# read csv
+# read csv ////////////////////////////////////////////
 
 data = []
 # 7 features
@@ -36,11 +26,7 @@ with open('banqiao.csv', 'r') as csvfile :
         else :
             first_line = False
 
-
-# In[4]:
-
-
-# data preprocessing
+# data preprocessing ///////////////////////////////////////
 
 # for all data
 for i in range(8784) :
@@ -107,18 +93,10 @@ for i in range(8784) :
     
 data = np.array(data)
 
-
-# In[5]:
-
-
 # feature scaling with standardization
-
-# need to store mean and std
 mean_store = []
 std_store = []
 data_std = []
-
-# standardization
 for feature in data :
     mean = feature.mean()
     std = feature.std()
@@ -126,16 +104,9 @@ for feature in data :
     mean_store.append(mean)
     std_store.append(std)
 
-
-# In[6]:
-
-
-# get training data and testing data
-
+# get training data in 3 parts ////////////////////////////////
 x_train = []
 y_train = []
-
- # devide training data in 3 parts
 for i in range(3) :
     x_train.append([])
     y_train.append([])
@@ -154,64 +125,103 @@ for i in range(8775) :
 x_train = np.array(x_train)
 y_train = np.array(y_train)
 
-
-# In[ ]:
-
-
-# training
+# training ////////////////////////////////////////////////////
 def training(lr,iteration,breaking_point) :
-    # 3-fold cross validation
-    loss_sum = 0
-    for va in range(3) :
-        # training
-        w = np.zeros(len(x_train[0][0])) # weight
-        b = 1 # bias
-        grad_w_sum = np.zeros(len(x_train[0][0]))
-        grad_b_sum = 0
+    best_avg_loss = 1.0
+    best_w = np.zeros(len(x_train[0][0])) # weight
+    best_b = 1 # bias
 
+    cur_avg_loss = 1.0
+    cur_w = np.zeros(len(x_train[0][0])) # weight
+    cur_b = 1 # bias
+
+    grad_w_sum = np.zeros(len(x_train[0][0]))
+    grad_b_sum = 0
+    for it in range(iteration) :
+        # training with full data
         for i in range(3) :
-            # ignore if it is validation set
-            if i == va :
-                continue
-            # repeat training same packet
-            for j in range(iteration) :
+            # stocastic gradient decent
+            for j in range(len(x_train[i])) :
+                # testing
+                y_raw = model(cur_b,cur_w,x_train[i][j]) # model
+                diff = difference(y_raw,y_train[i][j]) # difference
+                loss = loss_function(diff) # loss
+
+                # update weight
+                grad_w = grad_w_function(diff,x_train[i][j]) # gradient
+                grad_w_sum += grad_w**2 # sum of gradient
+                ada_w = np.sqrt(grad_w_sum) #adagrad
+                cur_w = cur_w-lr*grad_w/ada_w # update
+
+                # update bias
+                grad_b = grad_b_function(diff,x_train[i][j]) # gradient
+                grad_b_sum += grad_b**2 # sum of gradient
+                ada_b = np.sqrt(grad_b_sum) #adagrad
+                cur_b = cur_b-lr*grad_b/ada_b # update
+
+                if loss < breaking_point :
+                    break
+        
+        # 3-fold cross validation testing average loss
+        loss_sum = 0
+        for va in range(3) :
+            # training
+            test_w = cur_w # weight
+            test_b = cur_b # bias
+            test_grad_w_sum = grad_w_sum
+            test_grad_b_sum = grad_b_sum
+
+            for i in range(3) :
+                # ignore if it is validation set
+                if i == va :
+                    continue
                 # stocastic gradient decent
-                for k in range(len(x_train[i])) :
+                for j in range(len(x_train[i])) :
                     # testing
-                    y_raw = model(b,w,x_train[i][k]) # model
-                    diff = difference(y_raw,y_train[i][k]) # difference
+                    y_raw = model(test_b,test_w,x_train[i][j]) # model
+                    diff = difference(y_raw,y_train[i][j]) # difference
                     loss = loss_function(diff) # loss
 
                     # update weight
-                    grad_w = grad_w_function(diff,x_train[i][k]) # gradient
-                    grad_w_sum += grad_w**2 # sum of gradient
-                    ada_w = np.sqrt(grad_w_sum) #adagrad
-                    w = w-lr*grad_w/ada_w # update
+                    grad_w = grad_w_function(diff,x_train[i][j]) # gradient
+                    test_grad_w_sum += grad_w**2 # sum of gradient
+                    ada_w = np.sqrt(test_grad_w_sum) #adagrad
+                    test_w = test_w-lr*grad_w/ada_w # update
 
                     # update bias
-                    grad_b = grad_b_function(diff,x_train[i][k]) # gradient
-                    grad_b_sum += grad_b**2 # sum of gradient
-                    ada_b = np.sqrt(grad_b_sum) #adagrad
-                    b = b-lr*grad_b/ada_b # update
+                    grad_b = grad_b_function(diff,x_train[i][j]) # gradient
+                    test_grad_b_sum += grad_b**2 # sum of gradient
+                    ada_b = np.sqrt(test_grad_b_sum) #adagrad
+                    test_b = test_b-lr*grad_b/ada_b # update
 
                     if loss < breaking_point :
                         break
-                if loss < breaking_point :
-                    break
-        # testing with validation set
-        y_raw = model(b,w,x_train[va]) # model
-        diff = difference(y_raw,y_train[va]) # difference
-        loss = np.sum(loss_function(diff))/len(diff) # loss
-        loss_sum += loss
+
+            # testing with validation set
+            y_raw = model(test_b,test_w,x_train[va]) # model
+            diff = difference(y_raw,y_train[va]) # difference
+            loss = np.sum(loss_function(diff))/len(diff) # loss
+            loss_sum += loss
+
+        cur_avg_loss = loss_sum/3
+        print('avg_loss in iteration%d = %f  ' % (it,cur_avg_loss))
         
-    avg_loss = loss_sum/3
-    return avg_loss
+        # store weight and bias if it has best average loss
+        if cur_avg_loss < best_avg_loss :
+            best_avg_loss = cur_avg_loss
+            best_w = cur_w
+            brst_b = cur_b
+    
+    # store model
+    model_store = []
+    model_store.append(mean_store)
+    model_store.append(std_store)
+    model_store.append(best_w)
+    model_store.append(best_b)
+    model_store = np.array(model_store)
+    np.save('model.npy', model_store)
 
-
-# In[ ]:
-
-
-# modeling 1
+# modeling ///////////////////////////////////////////////
 
 # model : y = b+x*w
 # difference : diff = y-y_hat
@@ -237,26 +247,8 @@ def grad_b_function(diff,x) :
     return diff
 
 lr = 1 # learning rate
+iteration = 1000
 breaking_point = 0.00000000000001 # when to stop
 
-# find the best iteration
-best_avg_loss = 1.0
-best_iteration = 0
-for iteration in range(1000) :
-    avg_loss = training(lr,iteration,breaking_point)
-    print('avg_loss%d = %f  ' % (iteration+1,avg_loss))
-    if avg_loss < best_avg_loss :
-        best_avg_loss = avg_loss
-        best_iteration = iteration
-
-print ('best_iteration = %d best_avg_loss = %f  ' % (best_iteration,best_avg_loss))
-# avg_loss = 0.018675   >> not overfitting
-# breaking point hitted >> not underfitting
-# it's a good model, use it
-
-
-# In[ ]:
-
-
-
-
+training(lr,iteration,breaking_point)
+ 

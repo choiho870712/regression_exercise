@@ -11,7 +11,7 @@ for i in range(7):
 	data.append([])
     
 # open csv
-with open('banqiao.csv', 'r') as csvfile :
+with open('train.csv', 'r') as csvfile :
     # csv reader
     reader = csv.reader(csvfile ,delimiter=",")
     
@@ -28,8 +28,10 @@ with open('banqiao.csv', 'r') as csvfile :
 
 # data preprocessing ///////////////////////////////////////
 
+data_len = len(data[0])
+
 # for all data
-for i in range(8784) :
+for i in range(data_len) :
     # string to float
     data[0][i] = float(data[0][i]) # air pressure
     data[1][i] = float(data[1][i]) # temperature
@@ -88,8 +90,8 @@ for i in range(8784) :
         print(raw_wind_direction)
 
     # wind to rectangular form ( wind = wind_speed * wind_direction )
-    data[3][i] = wind_speed*math.sin(wind_direction/360)
-    data[4][i] = wind_speed*math.cos(wind_direction/360)
+    data[3][i] = wind_speed*math.sin(wind_direction/180*math.pi)
+    data[4][i] = wind_speed*math.cos(wind_direction/180*math.pi)
     
 data = np.array(data)
 
@@ -113,120 +115,36 @@ np.save('std.npy', std_store)
 # get training data in 3 parts ////////////////////////////////
 x_train = []
 y_train = []
-for i in range(3) :
-    x_train.append([])
-    y_train.append([])
 
 # 8776 kinds of 10hr data
-for i in range(8775) :
-    x_train[i%3].append([])
-    y_train[i%3].append(data[1][i+9])
+for i in range(data_len-9) :
+    x_train.append([])
+    y_train.append(data_std[1][i+9])
         
     #  9hr data
     for j in range(9) :
         # 7 features
         for k in range(7) :
-            x_train[i%3][int(i/3)].append(data_std[k][i+j])
+            x_train[i].append(data_std[k][i+j])
 
 x_train = np.array(x_train)
 y_train = np.array(y_train)
 
 # training ////////////////////////////////////////////////////
-def training() :
-    lr = 1 # learning rate
+lr = 0.0001 # learning rate
+iteration = 10
+w = np.zeros(63) # weight
+ada = np.zeros(63)
 
-    try :
-        cur_w = np.load('weight.npy') # weight
-        cur_b = np.load('bias.npy') # bias
-        best_w = cur_w # weight
-        best_b = cur_b # bias
-        best_avg_loss = np.load('best_avg_loss.npy')
-        grad_w_sum = np.load('grad_w_sum.npy')
-        grad_b_sum = np.load('grad_b_sum.npy')
-    except :
-        cur_w = np.zeros(len(x_train[0][0])) # weight
-        cur_b = 1.0 # bias
-        best_w = np.zeros(len(x_train[0][0])) # weight
-        best_b = 1.0 # bias
-        best_avg_loss = 1.0
-        grad_w_sum = np.zeros(len(x_train[0][0]))
-        grad_b_sum = 0.0
+for i in range(iteration) :
+    # stocastic gradient decent
+    for j in range(data_len-9) :
+        y = np.dot(x_train[j],w) # model
+        diff = y - y_train[j] # difference
+        ada += diff # adagrad
+        grad = diff*x_train[j] # gradient
+        w = w + lr*grad/ada # update
+        print(diff)
 
-    iteration = 0
-    while True :
-        iteration += 1
-        # training with full data
-        for i in range(3) :
-            # stocastic gradient decent
-            for j in range(len(x_train[i])) :
-                # testing
-                y_raw = model(cur_b,cur_w,x_train[i][j]) # model
-                diff = difference(y_raw,y_train[i][j]) # difference
-                loss = loss_function(diff) # loss
-
-                # update weight
-                grad_w = grad_w_function(diff,x_train[i][j]) # gradient
-                grad_w_sum += grad_w**2 # sum of gradient
-                ada_w = np.sqrt(grad_w_sum) #adagrad
-                cur_w = cur_w-lr*grad_w/ada_w # update
-
-                # update bias
-                grad_b = grad_b_function(diff) # gradient
-                grad_b_sum += grad_b**2 # sum of gradient
-                ada_b = np.sqrt(grad_b_sum) #adagrad
-                cur_b = cur_b-lr*grad_b/ada_b # update
-        
-        # 3-fold cross validation testing average loss
-        loss_sum = 0.0
-        for va in range(3) :
-            # testing with validation set
-            y_raw = model(cur_b,cur_w,x_train[va]) # model
-            diff = difference(y_raw,y_train[va]) # difference
-            loss = np.sum(loss_function(diff))/len(diff) # loss
-            loss_sum += loss
-
-        cur_avg_loss = loss_sum/3
-        print('avg_loss = %f    ' % (cur_avg_loss))
-        
-        # store weight and bias if it has best average loss
-        if cur_avg_loss < best_avg_loss :
-            best_avg_loss = cur_avg_loss
-            best_w = cur_w
-            best_b = cur_b
-    
-        # store model while 10 iteration
-        if (iteration%10) == 0 :
-            np.save('weight.npy', best_w)
-            np.save('bias.npy', best_b)
-            np.save('grad_w_sum.npy',grad_w_sum)
-            np.save('grad_b_sum.npy',grad_b_sum)
-            np.save('best_avg_loss.npy',best_avg_loss)
-            print('saved model')
-
-# modeling ///////////////////////////////////////////////
-
-# model : y = b+x*w
-# difference : diff = y-y_hat
-# loss : L = diff**2
-# gradient decent : grad_w = dL/dw = diff*x
-#                   grad_b = dL/db = diff
-# adagrad : ada = sqrt(sum(g**2))
-# update : w_n+1 = w_n-lr*g/ada
-
-def model(b,w,x) :
-    return np.dot(x,w)+b
-
-def difference(y,y_hat) :
-    return y-y_hat
-    
-def loss_function(diff) :
-    return diff**2
-
-def grad_w_function(diff,x) :
-    return diff*x
-
-def grad_b_function(diff) :
-    return diff
-
-training()
+np.save('model.npy', w)
  

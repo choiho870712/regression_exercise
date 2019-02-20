@@ -6,8 +6,7 @@ import math
 # read model
 mean = np.load('mean.npy')
 std = np.load('std.npy')
-b = np.load('bias.npy')
-w = np.load('weight.npy')
+w = np.load('model.npy')
 
 # input csv file
 data = []
@@ -16,7 +15,7 @@ for i in range(7):
     data.append([])
     
 # open csv
-with open('input.csv', 'r') as csvfile :
+with open('test.csv', 'r') as csvfile :
     # csv reader
     reader = csv.reader(csvfile ,delimiter=",")
     
@@ -93,8 +92,8 @@ for i in range(9) :
         print(raw_wind_direction)
 
     # wind to rectangular form ( wind = wind_speed * wind_direction )
-    data[3][i] = wind_speed*math.sin(wind_direction/360)
-    data[4][i] = wind_speed*math.cos(wind_direction/360)
+    data[3][i] = wind_speed*math.sin(wind_direction/180*math.pi)
+    data[4][i] = wind_speed*math.cos(wind_direction/180*math.pi)
     
 data = np.array(data)
 
@@ -105,15 +104,16 @@ for i in range(7) :
 
 data_std = np.array(data_std)
 
-# get x_train
-
-x_train = []
+# get x
+x = []
 for i in range(9) :
     # 7 features
     for j in range(7) :
-        x_train.append(data_std[j][i])
+        x.append(data_std[j][i])
 
-y = np.dot(x_train,w)+b
+# use model
+y = np.dot(x,w) # model
+y = y*std[1]+mean[1] # unscale temperature
 
 print(y)
 
